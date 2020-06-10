@@ -1,0 +1,44 @@
+﻿@using CurrencyConverter.ViewModels
+@model CurrencyViewModel
+<div class="container border border-dark m-3 bg-light rounded">
+    <div class="row">
+        <div class="col-5">
+            <div class="row">
+                <div class="col">
+                    <span>@Model.Value1</span>
+                    <span>@Model.Name1</span>
+                    <span>равно</span>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col">
+                    <h3 class="font-weight-bold">@Model.Value2  @Model.Name2</h3>
+                </div>
+            </div>
+            <form method="get">
+                <div class="row mt-5">
+                    <div class="col-6 form-group">
+                        <input asp-for="@Model.Value1" type="text" class="form-control" id="first_currency" value="@Model.Value1"/>
+                    </div>
+                    <div class="col-6 form-group">
+                        <select class="form-control" asp-for="@Model.Name1" asp-items="Model.CurrencyNames">                         
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6 form-group">                        
+                        <input asp-for="@Model.Value2" type="text" class="form-control" id="second_currency" value="@Model.Value2" onchange=""/>
+                    </div>
+                    <div class="col-6 form-group">
+                        <select class="form-control" asp-for="@Model.Name2" asp-items="Model.CurrencyNames">                        
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-2 mb-5">Конвертировать</button>
+            </form>
+        </div>
+        <div class="col-7">
+            <canvas class="my-4 chartjs-render-monitor" id="myChart" width="1507" height="636" style="display: block; height: 424px; width: 1005px;"></canvas>
+        </div>
+    </div>
+</div>
