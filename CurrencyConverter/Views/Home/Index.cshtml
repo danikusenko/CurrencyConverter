@@ -15,30 +15,78 @@
                     <h3 class="font-weight-bold">@Model.Value2  @Model.Name2</h3>
                 </div>
             </div>
-            <form method="get">
+            <form asp-action="Index" method="get" id="first_form">
                 <div class="row mt-5">
                     <div class="col-6 form-group">
-                        <input asp-for="@Model.Value1" type="text" class="form-control" id="first_currency" value="@Model.Value1"/>
+                        <input asp-for="@Model.Value1" id="first_currency" type="text" class="form-control" value="@Model.Value1" />
                     </div>
                     <div class="col-6 form-group">
-                        <select class="form-control" asp-for="@Model.Name1" asp-items="Model.CurrencyNames">                         
+                        <select onchange="$(this.form).submit();" class="form-control selectpicker border" data-live-search="true" asp-for="@Model.Name1" asp-items="Model.CurrencyNames">
                         </select>
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-6 form-group">                        
-                        <input asp-for="@Model.Value2" type="text" class="form-control" id="second_currency" value="@Model.Value2" onchange=""/>
+                    <div class="col-6 form-group">
+                        <input type="hidden" name="from_two_input" value="false" id="temp_input" />
+                        <input asp-for="@Model.Value2" type="text" class="form-control" id="second_currency" value="@Model.Value2" />
                     </div>
                     <div class="col-6 form-group">
-                        <select class="form-control" asp-for="@Model.Name2" asp-items="Model.CurrencyNames">                        
+                        <select onchange="$(this.form).submit();" class="form-control selectpicker border" data-live-search="true" asp-for="@Model.Name2" asp-items="Model.CurrencyNames">
                         </select>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary mt-2 mb-5">Конвертировать</button>
             </form>
         </div>
         <div class="col-7">
-            <canvas class="my-4 chartjs-render-monitor" id="myChart" width="1507" height="636" style="display: block; height: 424px; width: 1005px;"></canvas>
+            <vc:chartjs />
         </div>
     </div>
 </div>
+@section scripts{
+    <script>
+        $(document).ready(function () {            
+            $("#second_currency").on("keyup", function () {
+                let value = $("#second_currency").val();
+                let tmp = value.split(",").join(".");
+                let k = 0;
+                for (let i of tmp) {
+                    if (i === ".")
+                        k++;
+                }
+                if (k > 1) {
+                    $("#first_currency").val("");
+                    return;
+                }
+                $("#second_currency").val(tmp);
+                if (value.charAt(value.length - 1) === "," || value.charAt(value.length - 1) === "." || value.trim() === "") {
+                    $("#first_currency").val("");
+                }
+                else {
+                    $("#temp_input").val("true");
+                    $("#first_form").submit();
+                }
+            });
+            $("#first_currency").on("keyup", function () {
+                let value = $("#first_currency").val();
+                let tmp = value.split(",").join(".");
+                let k = 0;
+                for (let i of tmp) {
+                    if (i === ".")
+                        k++;
+                }
+                if (k > 1) {
+                    $("#second_currency").val("");
+                    return;
+                }
+                $("#first_currency").val(tmp);
+                if (value.charAt(value.length - 1) === "," || value.charAt(value.length - 1) === "." || value.trim() === "") {
+                    $("#second_currency").val("");
+                }
+                else {
+                    $("#temp_input").val("false");
+                    $("#first_form").submit();
+                }
+            });
+        });
+    </script>
+}

@@ -13,113 +13,108 @@ using CurrencyConverter.ViewModels;
 using System.IO;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Globalization;
+using System.Text.Json;
+using Newtonsoft.Json;
 
 namespace CurrencyConverter.Controllers
 {
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
+        private readonly List<Rate> rates = GetRates();
 
         public HomeController(ILogger<HomeController> logger)
         {
             _logger = logger;
         }
 
-        public List<Currency> GetCurrencies()
+        public static List<Rate> GetRates()
         {
             List<Currency> currencies = new List<Currency>();
-            string xmlStr;
-            System.Net.ServicePointManager.SecurityProtocol |=
-            SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
+            string dailyСourses, monthlyСourses;
+            ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
             using (var vc = new WebClient())
             {
-                xmlStr = vc.DownloadString("https://www.nbrb.by/services/xmlexrates.aspx");
+                dailyСourses = vc.DownloadString("https://www.nbrb.by/api/exrates/rates?periodicity=0");
+                monthlyСourses = vc.DownloadString("https://www.nbrb.by/api/exrates/rates?periodicity=1");
             }
-            XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.Load(new StringReader(xmlStr));
-            XmlElement xRoot = xmlDoc.DocumentElement;
-            foreach (XmlNode xnode in xRoot)
+            List<Rate> rates = JsonConvert.DeserializeObject<List<Rate>>(dailyСourses);
+            rates.AddRange(JsonConvert.DeserializeObject<List<Rate>>(monthlyСourses));
+            rates.Add(new Rate()
             {
-                Currency currency = new Currency();
-                foreach (XmlNode childNode in xnode.ChildNodes)
-                {
-                    if (childNode.Name == "Name")
-                        currency.Name = childNode.InnerText;
-
-                    if (childNode.Name == "Rate")
-                        currency.Rate = double.Parse(childNode.InnerText, CultureInfo.InvariantCulture).ToString();
-
-                    if (childNode.Name == "NumCode")
-                        currency.NumCode = childNode.InnerText;
-
-                    if (childNode.Name == "Scale")
-                        currency.Scale = double.Parse(childNode.InnerText);
-                }
-                currencies.Add(currency);
-            }
-            currencies.Add(new Currency()
-            {
-                Name = "Белорусский рубль",
-                Rate = "1",
-                NumCode = "933",
-                Scale = 1
+                Cur_ID = 1,
+                Cur_Name = "Белорусский рубль",
+                Cur_Scale = 1,
+                Cur_OfficialRate = 1
             });
-            return currencies;
+            return rates;
         }
 
         public SelectList getAllNames()
         {
             List<string> names = new List<string>();
-            foreach (var currency in GetCurrencies())
+            foreach (var rate in rates)
             {
-                names.Add(currency.Name);
+                names.Add(rate.Cur_Name);
             }
+            names.Sort();
             return new SelectList(names);
         }
 
 
         public void setDefaultValues(CurrencyViewModel currencyViewModel)
         {
-            currencyViewModel.Value1 = currencyViewModel.Value1 ?? "1";
-            foreach (var item in GetCurrencies())
+            currencyViewModel.Value1 = currencyViewModel.Value1 ?? 1;
+            foreach (var item in rates)
             {
-                if (item.NumCode == "933")
-                    currencyViewModel.Name1 = currencyViewModel.Name1 ?? item.Name;
+                if (item.Cur_ID == 1)
+                    currencyViewModel.Name1 = currencyViewModel.Name1 ?? item.Cur_Name;
 
-                if (item.NumCode == "840")
+                if (item.Cur_ID == 145)
                 {
-                    currencyViewModel.Name2 = currencyViewModel.Name2 ?? item.Name;
-                    currencyViewModel.Value2 = currencyViewModel.Value2 ?? item.Rate;
+                    currencyViewModel.Name2 = currencyViewModel.Name2 ?? item.Cur_Name;
+                    currencyViewModel.Value2 = currencyViewModel.Value2 ?? item.Cur_OfficialRate;
                 }
             }
-            currencyViewModel.Currencies = GetCurrencies();
+            currencyViewModel.Rates = rates;
             currencyViewModel.CurrencyNames = getAllNames();
         }
 
-        public Currency GetCurrencyFromName(string name)
+        public Rate GetRateFromName(string name)
         {
-            Currency currency = GetCurrencies().Where(i => i.Name == name).Select(i => i).First();
-            return currency;
+            Rate rate = rates.Where(i => i.Cur_Name == name).Select(i => i).First();
+            return rate;
         }
 
         public void Calculate(CurrencyViewModel currencyViewModel)
         {
-            double firstValue = double.Parse(currencyViewModel.Value1);
-            double firstRate = double.Parse(GetCurrencyFromName(currencyViewModel.Name1).Rate) / 
-                GetCurrencyFromName(currencyViewModel.Name1).Scale;
-            double secondRate = double.Parse(GetCurrencyFromName(currencyViewModel.Name2).Rate) /
-                GetCurrencyFromName(currencyViewModel.Name2).Scale;
-            double secondValue = Math.Round(firstRate * firstValue / secondRate, 2);
-            Console.WriteLine(firstValue);
-            Console.WriteLine(secondValue);
-            currencyViewModel.Value2 = secondValue.ToString();
+            double? firstValue = currencyViewModel.Value1;
+            double firstRate = GetRateFromName(currencyViewModel.Name1).Cur_OfficialRate /
+                GetRateFromName(currencyViewModel.Name1).Cur_Scale;
+            double secondRate = GetRateFromName(currencyViewModel.Name2).Cur_OfficialRate /
+                GetRateFromName(currencyViewModel.Name2).Cur_Scale;
+            double secondValue = Math.Round(firstRate * firstValue.Value / secondRate, 2);            
+            currencyViewModel.Value2 = secondValue;
         }
-         
-        public IActionResult Index(CurrencyViewModel currencyViewModel)
+
+        public void CalculateFromSecondInput(CurrencyViewModel currencyViewModel)
+        {
+            double? secondValue = currencyViewModel.Value2;
+            double secondRate = GetRateFromName(currencyViewModel.Name2).Cur_OfficialRate /
+                GetRateFromName(currencyViewModel.Name2).Cur_Scale;
+            double firstRate = GetRateFromName(currencyViewModel.Name1).Cur_OfficialRate /
+                GetRateFromName(currencyViewModel.Name1).Cur_Scale;
+            double firstValue = Math.Round(secondRate * secondValue.Value / firstRate, 2);
+            currencyViewModel.Value1 = firstValue;
+        }
+
+        public IActionResult Index(CurrencyViewModel currencyViewModel, string from_two_input)
         {
             setDefaultValues(currencyViewModel);
-            Calculate(currencyViewModel);
-            Console.WriteLine(currencyViewModel.Value2);
+            if (from_two_input == "true")
+                CalculateFromSecondInput(currencyViewModel);
+            else
+                Calculate(currencyViewModel);
             return View(currencyViewModel);
         }
 

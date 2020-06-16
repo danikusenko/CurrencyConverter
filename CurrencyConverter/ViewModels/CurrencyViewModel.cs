@@ -9,7 +9,7 @@ namespace CurrencyConverter.ViewModels
 {
     public class CurrencyViewModel
     {
-        public List<Currency> Currencies { get; set; }
+        public List<Rate> Rates { get; set; }
         
         public SelectList CurrencyNames { get; set; }
 
@@ -17,8 +17,8 @@ namespace CurrencyConverter.ViewModels
 
         public string Name2 { get; set; }
 
-        public string Value1 { get; set; }
+        public double? Value1 { get; set; }
 
-        public string Value2 { get; set; }
+        public double? Value2 { get; set; }
     }
 }
