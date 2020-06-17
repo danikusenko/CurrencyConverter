@@ -20,5 +20,9 @@ namespace CurrencyConverter.ViewModels
         public double? Value1 { get; set; }
 
         public double? Value2 { get; set; }
+
+        public double[] data { get; set; }
+
+        public string[] labels { get; set; }
     }
 }

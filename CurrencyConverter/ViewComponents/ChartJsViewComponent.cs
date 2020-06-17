@@ -2,6 +2,7 @@
 using CurrencyConverter.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,19 +13,19 @@ namespace CurrencyConverter.ViewComponents
     [ViewComponent(Name = "chartjs")]
     public class ChartJsViewComponent : ViewComponent
     {
-        public IViewComponentResult Invoke()
-        {
+        public IViewComponentResult Invoke(double[] data, string[] labels)
+        {                   
             var chartData = @"
             {
                 type: 'line',
                 responsive: true,
                 data:
                 {
-                    labels: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь'],                    
+                    labels:" + new JArray(labels) + @",                    
                     datasets: [{
                         label: '# of Votes',
                         lineTension: 0,
-                        data: [48, 49, 38, 41, 39, 42],
+                        data:" + new JArray(data) + @", 
                         backgroundColor: [
                         'rgba(2, 204, 39, 0.2)',                        
                             ],
@@ -36,13 +37,13 @@ namespace CurrencyConverter.ViewComponents
                     }]
                 },
                 options:
-                {                    
+                {      
                     scales:
                     {
                         yAxes: [{
                             ticks:
                             {
-                                beginAtZero: true
+                                beginAtZero: false
                             }
                         }]
                     },
@@ -50,10 +51,15 @@ namespace CurrencyConverter.ViewComponents
                         point:{
                             radius: 0
                         }
+                    },
+                    legend: {
+                        display: false
+                    },
+                    tooltips: {
+                        enabled: false
                     }
                 }
             }";
-
             var chart = JsonConvert.DeserializeObject<ChartJs>(chartData);
 
             var chartModel = new ChartJsViewModel

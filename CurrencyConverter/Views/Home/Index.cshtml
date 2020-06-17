@@ -38,7 +38,12 @@
             </form>
         </div>
         <div class="col-7">
-            <vc:chartjs />
+            <div class="m-1 d-flex justify-content-center"  aria-label="Basic example">
+                <button type="button" class="btn btn-secondary">5ДН</button>
+                <button type="button" class="btn btn-secondary">1МЕС</button>
+                <button type="button" class="btn btn-secondary">1ГОД</button>
+            </div>
+            <vc:chartjs data="@Model.data" labels="@Model.labels" />
         </div>
     </div>
 </div>

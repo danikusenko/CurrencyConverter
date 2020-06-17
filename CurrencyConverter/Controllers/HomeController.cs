@@ -15,28 +15,27 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Globalization;
 using System.Text.Json;
 using Newtonsoft.Json;
+using System.ComponentModel;
 
 namespace CurrencyConverter.Controllers
 {
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-        private readonly List<Rate> rates = GetRates();
+        private readonly List<Rate> rates = GetRates().Result;
 
         public HomeController(ILogger<HomeController> logger)
         {
             _logger = logger;
         }
 
-        public static List<Rate> GetRates()
+        public async static Task<List<Rate>> GetRates()
         {
-            List<Currency> currencies = new List<Currency>();
             string dailyСourses, monthlyСourses;
-            ServicePointManager.ServerCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
             using (var vc = new WebClient())
             {
-                dailyСourses = vc.DownloadString("https://www.nbrb.by/api/exrates/rates?periodicity=0");
-                monthlyСourses = vc.DownloadString("https://www.nbrb.by/api/exrates/rates?periodicity=1");
+                dailyСourses = await vc.DownloadStringTaskAsync(new Uri("https://www.nbrb.by/api/exrates/rates?periodicity=0"));
+                monthlyСourses = await vc.DownloadStringTaskAsync(new Uri("https://www.nbrb.by/api/exrates/rates?periodicity=1"));
             }
             List<Rate> rates = JsonConvert.DeserializeObject<List<Rate>>(dailyСourses);
             rates.AddRange(JsonConvert.DeserializeObject<List<Rate>>(monthlyСourses));
@@ -45,9 +44,30 @@ namespace CurrencyConverter.Controllers
                 Cur_ID = 1,
                 Cur_Name = "Белорусский рубль",
                 Cur_Scale = 1,
-                Cur_OfficialRate = 1
+                Cur_OfficialRate = 1,
+                Date = DateTime.Today
             });
             return rates;
+        }
+
+        public async Task<Dictionary<string, double>> loadChart(int currency_id, int scale, CurrencyViewModel currencyViewModel)
+        {
+            string courses;
+            string firstDate = DateTime.Today.AddDays(-4).ToString("yyyy-M-d");
+            string secondDate = DateTime.Today.ToString("yyyy-M-d");
+            string uri = "https://www.nbrb.by/API/ExRates/Rates/Dynamics/" + currency_id.ToString() +
+                "?startDate=" + firstDate + "&endDate=" + secondDate;
+            using (var vc = new WebClient())
+            {
+                courses = await vc.DownloadStringTaskAsync(new Uri(uri));
+            }
+            List<Rate> rates = JsonConvert.DeserializeObject<List<Rate>>(courses);
+            Dictionary<string, double> values = new Dictionary<string, double>();            
+            foreach (var rate in rates)
+            {
+                values.Add(rate.Date.ToString("M"), 1 / rate.Cur_OfficialRate / scale);
+            }
+            return values;
         }
 
         public SelectList getAllNames()
@@ -76,6 +96,8 @@ namespace CurrencyConverter.Controllers
                     currencyViewModel.Value2 = currencyViewModel.Value2 ?? item.Cur_OfficialRate;
                 }
             }
+            currencyViewModel.data = currencyViewModel.data ?? loadChart(145, 1, currencyViewModel).Result.Values.ToArray();
+            currencyViewModel.labels = currencyViewModel.labels ?? loadChart(145, 1, currencyViewModel).Result.Keys.ToArray();
             currencyViewModel.Rates = rates;
             currencyViewModel.CurrencyNames = getAllNames();
         }
@@ -93,7 +115,7 @@ namespace CurrencyConverter.Controllers
                 GetRateFromName(currencyViewModel.Name1).Cur_Scale;
             double secondRate = GetRateFromName(currencyViewModel.Name2).Cur_OfficialRate /
                 GetRateFromName(currencyViewModel.Name2).Cur_Scale;
-            double secondValue = Math.Round(firstRate * firstValue.Value / secondRate, 2);            
+            double secondValue = Math.Round(firstRate * firstValue.Value / secondRate, 2);
             currencyViewModel.Value2 = secondValue;
         }
 
