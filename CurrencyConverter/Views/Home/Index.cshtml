@@ -35,13 +35,14 @@
                         </select>
                     </div>
                 </div>
+                <input id="gap_input" type="hidden" name="gap" value="month" />
             </form>
         </div>
         <div class="col-7">
-            <div class="m-1 d-flex justify-content-center"  aria-label="Basic example">
-                <button type="button" class="btn btn-secondary">5ДН</button>
-                <button type="button" class="btn btn-secondary">1МЕС</button>
-                <button type="button" class="btn btn-secondary">1ГОД</button>
+            <div class="m-1 d-flex justify-content-center"  aria-label="Basic example">                 
+                <button id="five_days" type="button" class="btn btn-secondary">5ДН</button>
+                <button id="month" type="button" class="btn btn-secondary">1МЕС</button>
+                <button id="year" type="button" class="btn btn-secondary">1ГОД</button>
             </div>
             <vc:chartjs data="@Model.data" labels="@Model.labels" />
         </div>
@@ -49,7 +50,11 @@
 </div>
 @section scripts{
     <script>
-        $(document).ready(function () {            
+        $(document).ready(function () {
+            $("#five_days, #month, #year").on("click", function (event) {
+                $("#gap_input").val(event.target.id);
+                $("#first_form").submit();
+            });
             $("#second_currency").on("keyup", function () {
                 let value = $("#second_currency").val();
                 let tmp = value.split(",").join(".");

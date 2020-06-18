@@ -14,7 +14,22 @@ namespace CurrencyConverter.ViewComponents
     public class ChartJsViewComponent : ViewComponent
     {
         public IViewComponentResult Invoke(double[] data, string[] labels)
-        {                   
+        {
+            JArray colors = new JArray();
+            JArray borderColor = new JArray();
+            if (data.Length > 0)
+            {
+                if (data[0] > data[data.Length - 1])
+                {
+                    colors.Add("rgba(230, 74, 25, 0.2)");
+                    borderColor.Add("rgba(230, 74, 25, 1)");
+                }
+                else
+                {
+                    colors.Add("rgba(15, 157, 88, 0.2)");
+                    borderColor.Add("rgba(15, 157, 88, 1)");
+                }
+            }
             var chartData = @"
             {
                 type: 'line',
@@ -23,16 +38,11 @@ namespace CurrencyConverter.ViewComponents
                 {
                     labels:" + new JArray(labels) + @",                    
                     datasets: [{
-                        label: '# of Votes',
+                        label: '',
                         lineTension: 0,
                         data:" + new JArray(data) + @", 
-                        backgroundColor: [
-                        'rgba(2, 204, 39, 0.2)',                        
-                            ],
-                        borderColor: [
-                        'rgba(0, 171, 31, 1)',
-                        
-                            ],
+                        backgroundColor:" + colors + @",
+                        borderColor:" + borderColor + @",
                         borderWidth: 2
                     }]
                 },
@@ -44,6 +54,10 @@ namespace CurrencyConverter.ViewComponents
                             ticks:
                             {
                                 beginAtZero: false
+                            },
+                            scaleLabel:
+                            {
+                                display: true
                             }
                         }]
                     },
@@ -56,7 +70,7 @@ namespace CurrencyConverter.ViewComponents
                         display: false
                     },
                     tooltips: {
-                        enabled: false
+                        enabled: true
                     }
                 }
             }";
