@@ -39,7 +39,7 @@
             </form>
         </div>
         <div class="col-7">
-            <div class="m-1 d-flex justify-content-center"  aria-label="Basic example">                 
+            <div class="m-1 d-flex justify-content-center" aria-label="Basic example">
                 <button id="five_days" type="button" class="btn btn-secondary">5ДН</button>
                 <button id="month" type="button" class="btn btn-secondary">1МЕС</button>
                 <button id="year" type="button" class="btn btn-secondary">1ГОД</button>
@@ -51,51 +51,37 @@
 @section scripts{
     <script>
         $(document).ready(function () {
+            function validateAndSumbit(introduced_input, received_input, set_value) {
+                let value = $(introduced_input).val();
+                let tmp = value.split(",").join(".");
+                let k = 0;
+                for (let i of tmp) {
+                    if (i === ".")
+                        k++;
+                }
+                if (k > 1) {
+                    $(received_input).val("");
+                    return;
+                }
+                $(introduced_input).val(tmp);
+                if (value.charAt(value.length - 1) === "," || value.charAt(value.length - 1) === "." || value.trim() === "") {
+                    $(received_input).val("");
+                }
+                else {
+                    $("#temp_input").val(set_value);
+                    $("#first_form").submit();
+                }
+            }
             $("#five_days, #month, #year").on("click", function (event) {
                 $("#gap_input").val(event.target.id);
                 $("#first_form").submit();
             });
-            $("#second_currency").on("keyup", function () {
-                let value = $("#second_currency").val();
-                let tmp = value.split(",").join(".");
-                let k = 0;
-                for (let i of tmp) {
-                    if (i === ".")
-                        k++;
-                }
-                if (k > 1) {
-                    $("#first_currency").val("");
-                    return;
-                }
-                $("#second_currency").val(tmp);
-                if (value.charAt(value.length - 1) === "," || value.charAt(value.length - 1) === "." || value.trim() === "") {
-                    $("#first_currency").val("");
-                }
-                else {
-                    $("#temp_input").val("true");
-                    $("#first_form").submit();
-                }
+            $("#second_currency").on("keyup", function () {                
+                validateAndSumbit("#second_currency", "#first_currency", "true");
             });
-            $("#first_currency").on("keyup", function () {
-                let value = $("#first_currency").val();
-                let tmp = value.split(",").join(".");
-                let k = 0;
-                for (let i of tmp) {
-                    if (i === ".")
-                        k++;
-                }
-                if (k > 1) {
-                    $("#second_currency").val("");
-                    return;
-                }
-                $("#first_currency").val(tmp);
-                if (value.charAt(value.length - 1) === "," || value.charAt(value.length - 1) === "." || value.trim() === "") {
-                    $("#second_currency").val("");
-                }
-                else {
-                    $("#temp_input").val("false");
-                    $("#first_form").submit();
-                }
+
+            $("#first_currency").on("keyup", function () {                
+                validateAndSumbit("#first_currency", "#second_currency", "false");
             });
         });
     </script>
