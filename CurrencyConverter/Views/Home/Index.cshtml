@@ -35,7 +35,7 @@
                         </select>
                     </div>
                 </div>
-                <input id="gap_input" type="hidden" name="gap" value="month" />
+                <input id="gap_input" type="hidden" name="gap" value="@ViewBag.Gap" />
             </form>
         </div>
         <div class="col-7">
@@ -74,7 +74,8 @@
             }
             $("#five_days, #month, #year").on("click", function (event) {
                 $("#gap_input").val(event.target.id);
-                $("#first_form").submit();
+                validateAndSumbit("#first_currency", "#second_currency", "false");
+                //$("#first_form").submit();
             });
             $("#second_currency").on("keyup", function () {                
                 validateAndSumbit("#second_currency", "#first_currency", "true");

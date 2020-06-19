@@ -73,7 +73,7 @@ namespace CurrencyConverter.Controllers
             Dictionary<string, double> values = new Dictionary<string, double>();
             foreach (var rate in rates)
             {
-                values.Add(rate.Date.ToString("M"), dividend_currency_rate / rate.Cur_OfficialRate / scale);
+                values.Add(rate.Date.ToString("M"), dividend_currency_rate / rate.Cur_OfficialRate * scale);
             }
             return values;
         }
@@ -129,7 +129,6 @@ namespace CurrencyConverter.Controllers
             int scale = GetRateFromName(currencyViewModel.Name2).Cur_Scale;
             currencyViewModel.labels = loadChart(firstRate, secondCurrencyId, scale, gap).Result.Keys.ToArray();
             currencyViewModel.data = loadChart(firstRate, secondCurrencyId, scale, gap).Result.Values.ToArray();
-           
         }
 
         public void CalculateFromSecondInput(CurrencyViewModel currencyViewModel, string gap)
@@ -141,19 +140,20 @@ namespace CurrencyConverter.Controllers
                 GetRateFromName(currencyViewModel.Name1).Cur_Scale;
             double firstValue = Math.Round(secondRate * secondValue.Value / firstRate, 2);
             currencyViewModel.Value1 = firstValue;
-            /*int firstCurrencyId = GetRateFromName(currencyViewModel.Name1).Cur_ID;
-            int scale = GetRateFromName(currencyViewModel.Name1).Cur_Scale;
-            currencyViewModel.labels = loadChart(secondRate, firstCurrencyId, scale).Result.Keys.ToArray();            
-            currencyViewModel.data = loadChart(secondRate, firstCurrencyId, scale).Result.Values.ToArray();*/
+            int secondCurrencyId = GetRateFromName(currencyViewModel.Name2).Cur_ID;
+            int scale = GetRateFromName(currencyViewModel.Name2).Cur_Scale;
+            currencyViewModel.labels = loadChart(firstRate, secondCurrencyId, scale, gap).Result.Keys.ToArray();
+            currencyViewModel.data = loadChart(firstRate, secondCurrencyId, scale, gap).Result.Values.ToArray();
         }
 
         public IActionResult Index(CurrencyViewModel currencyViewModel, string from_two_input, string gap)
-        {            
+        {
             setDefaultValues(currencyViewModel);
             if (from_two_input == "true")
                 CalculateFromSecondInput(currencyViewModel, gap);
             else
                 Calculate(currencyViewModel, gap);
+            ViewBag.Gap = gap;
             return View(currencyViewModel);
         }
 

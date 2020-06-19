@@ -17,6 +17,7 @@ namespace CurrencyConverter.ViewComponents
         {
             JArray colors = new JArray();
             JArray borderColor = new JArray();
+            int stepsize = labels.Length <= 5 ? 1 : labels.Length > 5 && labels.Length <= 32 ? 10 : 30;
             if (data.Length > 0)
             {
                 if (data[0] > data[data.Length - 1])
@@ -53,7 +54,8 @@ namespace CurrencyConverter.ViewComponents
                         yAxes: [{
                             ticks:
                             {
-                                beginAtZero: false
+                                beginAtZero: false,
+                                display: true
                             },
                             scaleLabel:
                             {
