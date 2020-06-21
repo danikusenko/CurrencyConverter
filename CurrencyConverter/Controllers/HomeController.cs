@@ -116,7 +116,7 @@ namespace CurrencyConverter.Controllers
             return rate;
         }
 
-        public void Calculate(CurrencyViewModel currencyViewModel, string gap)
+        public void Calculate(CurrencyViewModel currencyViewModel)
         {
             double? firstValue = currencyViewModel.Value1;
             double firstRate = GetRateFromName(currencyViewModel.Name1).Cur_OfficialRate /
@@ -125,13 +125,10 @@ namespace CurrencyConverter.Controllers
                 GetRateFromName(currencyViewModel.Name2).Cur_Scale;
             double secondValue = Math.Round(firstRate * firstValue.Value / secondRate, 2);
             currencyViewModel.Value2 = secondValue;
-            int secondCurrencyId = GetRateFromName(currencyViewModel.Name2).Cur_ID;
-            int scale = GetRateFromName(currencyViewModel.Name2).Cur_Scale;
-            currencyViewModel.labels = loadChart(firstRate, secondCurrencyId, scale, gap).Result.Keys.ToArray();
-            currencyViewModel.data = loadChart(firstRate, secondCurrencyId, scale, gap).Result.Values.ToArray();
+
         }
 
-        public void CalculateFromSecondInput(CurrencyViewModel currencyViewModel, string gap)
+        public void CalculateFromSecondInput(CurrencyViewModel currencyViewModel)
         {
             double? secondValue = currencyViewModel.Value2;
             double secondRate = GetRateFromName(currencyViewModel.Name2).Cur_OfficialRate /
@@ -140,6 +137,13 @@ namespace CurrencyConverter.Controllers
                 GetRateFromName(currencyViewModel.Name1).Cur_Scale;
             double firstValue = Math.Round(secondRate * secondValue.Value / firstRate, 2);
             currencyViewModel.Value1 = firstValue;
+
+        }
+
+        public void setValuesForChart(CurrencyViewModel currencyViewModel, string gap)
+        {
+            double firstRate = GetRateFromName(currencyViewModel.Name1).Cur_OfficialRate /
+                GetRateFromName(currencyViewModel.Name1).Cur_Scale;
             int secondCurrencyId = GetRateFromName(currencyViewModel.Name2).Cur_ID;
             int scale = GetRateFromName(currencyViewModel.Name2).Cur_Scale;
             currencyViewModel.labels = loadChart(firstRate, secondCurrencyId, scale, gap).Result.Keys.ToArray();
@@ -150,9 +154,10 @@ namespace CurrencyConverter.Controllers
         {
             setDefaultValues(currencyViewModel);
             if (from_two_input == "true")
-                CalculateFromSecondInput(currencyViewModel, gap);
+                CalculateFromSecondInput(currencyViewModel);
             else
-                Calculate(currencyViewModel, gap);
+                Calculate(currencyViewModel);
+            setValuesForChart(currencyViewModel, gap);
             ViewBag.Gap = gap;
             return View(currencyViewModel);
         }

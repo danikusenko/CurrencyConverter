@@ -21,7 +21,7 @@
                         <input asp-for="@Model.Value1" id="first_currency" type="text" class="form-control" value="@Model.Value1" />
                     </div>
                     <div class="col-6 form-group">
-                        <select onchange="$(this.form).submit();" class="form-control selectpicker border" data-live-search="true" asp-for="@Model.Name1" asp-items="Model.CurrencyNames">
+                        <select id="first_select" class="form-control selectpicker border" data-live-search="true" asp-for="@Model.Name1" asp-items="Model.CurrencyNames">
                         </select>
                     </div>
                 </div>
@@ -31,7 +31,7 @@
                         <input asp-for="@Model.Value2" type="text" class="form-control" id="second_currency" value="@Model.Value2" />
                     </div>
                     <div class="col-6 form-group">
-                        <select onchange="$(this.form).submit();" class="form-control selectpicker border" data-live-search="true" asp-for="@Model.Name2" asp-items="Model.CurrencyNames">
+                        <select id="second_select" class="form-control selectpicker border" data-live-search="true" asp-for="@Model.Name2" asp-items="Model.CurrencyNames">
                         </select>
                     </div>
                 </div>
@@ -51,6 +51,27 @@
 @section scripts{
     <script>
         $(document).ready(function () {
+            (function () {
+                let first_select = $("#first_select");
+                first_select.data("prev_first", first_select.val());
+                first_select.change(function () {
+                    if ($("#first_select").val() === $("#second_select").val()) {
+                        let jqThis = $(this);
+                        $("#second_select").val(jqThis.data("prev_first")).change();
+                    }
+                    $("#first_form").submit();
+                });
+                let second_select = $("#second_select");
+                second_select.data("prev_second", second_select.val());
+                second_select.change(function () {
+                    if ($("#first_select").val() === $("#second_select").val()) {
+                        let jqThis = $(this);
+                        $("#first_select").val(jqThis.data("prev_second")).change();
+                    }
+                    $("#first_form").submit();
+                });
+            })();
+            
             function validateAndSumbit(introduced_input, received_input, set_value) {
                 let value = $(introduced_input).val();
                 let tmp = value.split(",").join(".");
@@ -74,14 +95,13 @@
             }
             $("#five_days, #month, #year").on("click", function (event) {
                 $("#gap_input").val(event.target.id);
-                validateAndSumbit("#first_currency", "#second_currency", "false");
-                //$("#first_form").submit();
+                validateAndSumbit("#first_currency", "#second_currency", "false");                
             });
-            $("#second_currency").on("keyup", function () {                
+            $("#second_currency").on("keyup", function () {
                 validateAndSumbit("#second_currency", "#first_currency", "true");
             });
 
-            $("#first_currency").on("keyup", function () {                
+            $("#first_currency").on("keyup", function () {
                 validateAndSumbit("#first_currency", "#second_currency", "false");
             });
         });
