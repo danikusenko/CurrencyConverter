@@ -50,8 +50,8 @@ namespace CurrencyConverter.Controllers
             return rates;
         }
 
-        public async Task<Dictionary<string, double>> loadChart(double dividend_currency_rate, int currency_id,
-            int scale, string gap = "month")
+        public async Task<Dictionary<string, double>> loadChart(double dividend_currency_rate, Rate rate,
+            string gap = "month", bool byRub = false)
         {
             string courses, firstDate = "";
             if (gap == "five_days")
@@ -63,7 +63,7 @@ namespace CurrencyConverter.Controllers
                 firstDate = DateTime.Today.AddMonths(-1).ToString("yyyy-M-d");
             }
             string secondDate = DateTime.Today.ToString("yyyy-M-d");
-            string uri = "https://www.nbrb.by/API/ExRates/Rates/Dynamics/" + currency_id.ToString() +
+            string uri = "https://www.nbrb.by/API/ExRates/Rates/Dynamics/" + rate.Cur_ID.ToString() +
                 "?startDate=" + firstDate + "&endDate=" + secondDate;
             using (var vc = new WebClient())
             {
@@ -71,9 +71,19 @@ namespace CurrencyConverter.Controllers
             }
             List<Rate> rates = JsonConvert.DeserializeObject<List<Rate>>(courses);
             Dictionary<string, double> values = new Dictionary<string, double>();
-            foreach (var rate in rates)
+            if (byRub)
             {
-                values.Add(rate.Date.ToString("M"), dividend_currency_rate / rate.Cur_OfficialRate * scale);
+                foreach (var _rate in rates)
+                {
+                    values.Add(_rate.Date.ToString("M"), _rate.Cur_OfficialRate / rate.Cur_Scale);
+                }
+            }
+            else
+            {
+                foreach (var _rate in rates)
+                {
+                    values.Add(_rate.Date.ToString("M"), dividend_currency_rate / _rate.Cur_OfficialRate * rate.Cur_Scale);
+                }
             }
             return values;
         }
@@ -104,8 +114,9 @@ namespace CurrencyConverter.Controllers
                     currencyViewModel.Value2 = currencyViewModel.Value2 ?? item.Cur_OfficialRate;
                 }
             }
-            currencyViewModel.data = currencyViewModel.data ?? loadChart(1, 145, 1).Result.Values.ToArray();
-            currencyViewModel.labels = currencyViewModel.labels ?? loadChart(1, 145, 1).Result.Keys.ToArray();
+            Rate usd = rates.Where(rate => rate.Cur_ID == 145).Select(i => i).First();
+            currencyViewModel.data = currencyViewModel.data ?? loadChart(1, usd).Result.Values.ToArray();
+            currencyViewModel.labels = currencyViewModel.labels ?? loadChart(1, usd).Result.Keys.ToArray();
             currencyViewModel.Rates = rates;
             currencyViewModel.CurrencyNames = getAllNames();
         }
@@ -144,10 +155,16 @@ namespace CurrencyConverter.Controllers
         {
             double firstRate = GetRateFromName(currencyViewModel.Name1).Cur_OfficialRate /
                 GetRateFromName(currencyViewModel.Name1).Cur_Scale;
-            int secondCurrencyId = GetRateFromName(currencyViewModel.Name2).Cur_ID;
-            int scale = GetRateFromName(currencyViewModel.Name2).Cur_Scale;
-            currencyViewModel.labels = loadChart(firstRate, secondCurrencyId, scale, gap).Result.Keys.ToArray();
-            currencyViewModel.data = loadChart(firstRate, secondCurrencyId, scale, gap).Result.Values.ToArray();
+            if (GetRateFromName(currencyViewModel.Name2).Cur_ID == 1)
+            {
+                currencyViewModel.labels = loadChart(firstRate, GetRateFromName(currencyViewModel.Name1), gap, true).Result.Keys.ToArray();
+                currencyViewModel.data = loadChart(firstRate, GetRateFromName(currencyViewModel.Name1), gap, true).Result.Values.ToArray();
+            }
+            else
+            {
+                currencyViewModel.labels = loadChart(firstRate, GetRateFromName(currencyViewModel.Name2), gap).Result.Keys.ToArray();
+                currencyViewModel.data = loadChart(firstRate, GetRateFromName(currencyViewModel.Name2), gap).Result.Values.ToArray();
+            }
         }
 
         public IActionResult Index(CurrencyViewModel currencyViewModel, string from_two_input, string gap)
