@@ -53,36 +53,77 @@ namespace CurrencyConverter.Controllers
         public async Task<Dictionary<string, double>> loadChart(double dividend_currency_rate, Rate rate,
             string gap = "month", bool byRub = false)
         {
-            string courses, firstDate = "";
-            if (gap == "five_days")
-                firstDate = DateTime.Today.AddDays(-4).ToString("yyyy-M-d");
-            else if (gap == "year")
-                firstDate = DateTime.Today.AddYears(-1).ToString("yyyy-M-d");
-            else if (gap == "month" || gap == null)
+            string courses, uri, format = "M", secondDate = "", firstDate = "";
+            int[] primaryKeys = { 68, 184, 74, 77, 232, 27 };
+            bool isMonthlyСourses = Array.Exists(primaryKeys, i => i == rate.Cur_ID || rate.Cur_ID >= 306);
+            bool isYear = false;
+            switch (gap)
             {
-                firstDate = DateTime.Today.AddMonths(-1).ToString("yyyy-M-d");
+                case "five_days":
+                    {
+                        firstDate = DateTime.Today.AddDays(-4).ToString("yyyy-M-d");
+                        secondDate = DateTime.Today.ToString("yyyy-M-d");
+                        break;
+                    }
+                case "year":
+                    {
+                        firstDate = DateTime.Today.AddYears(-1).ToString("yyyy-M-d");
+                        secondDate = DateTime.Today.ToString("yyyy-M-d");
+                        format = "D";
+                        isYear = true;
+                        break;
+                    }
+                case "month":
+                case null:
+                    {
+                        firstDate = DateTime.Today.AddMonths(-1).ToString("yyyy-M-d");
+                        secondDate = DateTime.Today.ToString("yyyy-M-d");
+                        break;
+                    }
             }
-            string secondDate = DateTime.Today.ToString("yyyy-M-d");
-            string uri = "https://www.nbrb.by/API/ExRates/Rates/Dynamics/" + rate.Cur_ID.ToString() +
-                "?startDate=" + firstDate + "&endDate=" + secondDate;
-            using (var vc = new WebClient())
+            List<Rate> rates = new List<Rate>();
+            if (!isMonthlyСourses)
             {
-                courses = await vc.DownloadStringTaskAsync(new Uri(uri));
+                uri = "https://www.nbrb.by/API/ExRates/Rates/Dynamics/" + rate.Cur_ID.ToString() +
+                    "?startDate=" + firstDate + "&endDate=" + secondDate;
+                using (var vc = new WebClient())
+                {
+                    courses = await vc.DownloadStringTaskAsync(new Uri(uri));
+                }
+                rates = JsonConvert.DeserializeObject<List<Rate>>(courses);
             }
-            List<Rate> rates = JsonConvert.DeserializeObject<List<Rate>>(courses);
+            else
+            {
+
+                while (DateTime.Parse(firstDate) <= DateTime.Parse(secondDate))
+                {
+                    uri = "https://www.nbrb.by/api/exrates/rates/" + rate.Cur_ID + "?ondate=" + firstDate;
+                    using (var vc = new WebClient())
+                    {
+                        courses = await vc.DownloadStringTaskAsync(new Uri(uri));
+                    }
+                    rates.Add(JsonConvert.DeserializeObject<Rate>(courses));
+                    if (isYear)
+                        firstDate = DateTime.Parse(firstDate).AddMonths(1).ToString("yyyy-M-d");
+                    else
+                        firstDate = DateTime.Parse(firstDate).AddDays(1).ToString("yyyy-M-d");
+                }
+            }
+
+
             Dictionary<string, double> values = new Dictionary<string, double>();
             if (byRub)
             {
                 foreach (var _rate in rates)
                 {
-                    values.Add(_rate.Date.ToString("M"), _rate.Cur_OfficialRate / rate.Cur_Scale);
+                    values.Add(_rate.Date.ToString(format), _rate.Cur_OfficialRate / rate.Cur_Scale);
                 }
             }
             else
             {
                 foreach (var _rate in rates)
                 {
-                    values.Add(_rate.Date.ToString("M"), dividend_currency_rate / _rate.Cur_OfficialRate * rate.Cur_Scale);
+                    values.Add(_rate.Date.ToString(format), dividend_currency_rate / _rate.Cur_OfficialRate * rate.Cur_Scale);
                 }
             }
             return values;
