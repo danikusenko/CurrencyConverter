@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Localization;
 
 namespace CurrencyConverter
 {
@@ -29,7 +30,22 @@ namespace CurrencyConverter
         {
             /*services.AddHostedService<CurrencyService>();
             services.AddMemoryCache();*/
-            services.AddControllersWithViews();            
+            services.AddTransient<IStringLocalizer, CustomStringLocalizer>();
+            services.AddLocalization(options => options.ResourcesPath = "Resources");
+            services.AddControllersWithViews().AddViewLocalization();
+            services.Configure<RequestLocalizationOptions>(options =>
+            {
+                var supportedCultures = new[]
+                {
+                    new CultureInfo("en"),
+                    new CultureInfo("be"),
+                    new CultureInfo("ru")
+                };
+
+                options.DefaultRequestCulture = new RequestCulture("ru");
+                options.SupportedCultures = supportedCultures;
+                options.SupportedUICultures = supportedCultures;
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -47,13 +63,13 @@ namespace CurrencyConverter
             }
             var supportedCultures = new[]
             {
-                new CultureInfo("en-US"),
-                new CultureInfo("be-BY"),
-                new CultureInfo("ru-RU")
+                new CultureInfo("en"),
+                new CultureInfo("be"),
+                new CultureInfo("ru")
             };
             app.UseRequestLocalization(new RequestLocalizationOptions
             {
-                DefaultRequestCulture = new RequestCulture("ru-RU"),
+                DefaultRequestCulture = new RequestCulture("ru"),
                 SupportedCultures = supportedCultures,
                 SupportedUICultures = supportedCultures
             });

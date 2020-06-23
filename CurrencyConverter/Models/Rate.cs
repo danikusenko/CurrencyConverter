@@ -12,6 +12,8 @@ namespace CurrencyConverter.Models
 
         public double Cur_OfficialRate { get; set; }
 
+        public string Cur_Abbreviation { get; set; }
+
         public DateTime Date { get; set; }
     }
 }

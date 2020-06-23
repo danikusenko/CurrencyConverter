@@ -13,6 +13,10 @@ namespace CurrencyConverter.ViewModels
         
         public SelectList CurrencyNames { get; set; }
 
+        public int? Cur_Id1 { get; set; }
+
+        public int? Cur_Id2 { get; set; }
+
         public string Name1 { get; set; }
 
         public string Name2 { get; set; }
@@ -24,5 +28,7 @@ namespace CurrencyConverter.ViewModels
         public double[] data { get; set; }
 
         public string[] labels { get; set; }
+
+        public string gap { get; set; }
     }
 }

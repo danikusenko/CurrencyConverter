@@ -16,6 +16,9 @@ using System.Globalization;
 using System.Text.Json;
 using Newtonsoft.Json;
 using System.ComponentModel;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 
 namespace CurrencyConverter.Controllers
 {
@@ -23,10 +26,12 @@ namespace CurrencyConverter.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly List<Rate> rates = GetRates().Result;
+        private readonly IStringLocalizer _localizer;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(ILogger<HomeController> logger, IStringLocalizer localizer)
         {
             _logger = logger;
+            _localizer = localizer;
         }
 
         public async static Task<List<Rate>> GetRates()
@@ -41,11 +46,12 @@ namespace CurrencyConverter.Controllers
             rates.AddRange(JsonConvert.DeserializeObject<List<Rate>>(monthlyСourses));
             rates.Add(new Rate()
             {
-                Cur_ID = 1,
+                Cur_ID = 355,
                 Cur_Name = "Белорусский рубль",
                 Cur_Scale = 1,
                 Cur_OfficialRate = 1,
-                Date = DateTime.Today
+                Date = DateTime.Today,
+                Cur_Abbreviation = "BY"
             });
             return rates;
         }
@@ -131,50 +137,43 @@ namespace CurrencyConverter.Controllers
 
         public SelectList getAllNames()
         {
-            List<string> names = new List<string>();
+            Dictionary<int, string> _rates = new Dictionary<int, string>();
             foreach (var rate in rates)
             {
-                names.Add(rate.Cur_Name);
-            }
-            names.Sort();
-            return new SelectList(names);
+                _rates.Add(rate.Cur_ID, _localizer[rate.Cur_Abbreviation]);
+            }            
+            return new SelectList(_rates.OrderBy(x => x.Value), "Key", "Value");            
         }
 
 
         public void setDefaultValues(CurrencyViewModel currencyViewModel)
         {
-            currencyViewModel.Value1 = currencyViewModel.Value1 ?? 1;
-            foreach (var item in rates)
-            {
-                if (item.Cur_ID == 1)
-                    currencyViewModel.Name1 = currencyViewModel.Name1 ?? item.Cur_Name;
-
-                if (item.Cur_ID == 145)
-                {
-                    currencyViewModel.Name2 = currencyViewModel.Name2 ?? item.Cur_Name;
-                    currencyViewModel.Value2 = currencyViewModel.Value2 ?? item.Cur_OfficialRate;
-                }
-            }
+            currencyViewModel.Value1 = currencyViewModel.Value1 ?? 1;            
             Rate usd = rates.Where(rate => rate.Cur_ID == 145).Select(i => i).First();
+            currencyViewModel.Value2 = currencyViewModel.Value2 ?? usd.Cur_OfficialRate;
             currencyViewModel.data = currencyViewModel.data ?? loadChart(1, usd).Result.Values.ToArray();
             currencyViewModel.labels = currencyViewModel.labels ?? loadChart(1, usd).Result.Keys.ToArray();
-            currencyViewModel.Rates = rates;
+            currencyViewModel.Rates = currencyViewModel.Rates ?? rates;
+            currencyViewModel.Cur_Id2 = currencyViewModel.Cur_Id2 ?? 145;
+            currencyViewModel.Cur_Id1 = currencyViewModel.Cur_Id1 ?? 355;
             currencyViewModel.CurrencyNames = getAllNames();
         }
 
-        public Rate GetRateFromName(string name)
+        
+        public Rate GetRateFromId(int? id)
         {
-            Rate rate = rates.Where(i => i.Cur_Name == name).Select(i => i).First();
+            Rate rate = rates.Where(i => i.Cur_ID == id).Select(i => i).First();
             return rate;
         }
+        
 
         public void Calculate(CurrencyViewModel currencyViewModel)
         {
             double? firstValue = currencyViewModel.Value1;
-            double firstRate = GetRateFromName(currencyViewModel.Name1).Cur_OfficialRate /
-                GetRateFromName(currencyViewModel.Name1).Cur_Scale;
-            double secondRate = GetRateFromName(currencyViewModel.Name2).Cur_OfficialRate /
-                GetRateFromName(currencyViewModel.Name2).Cur_Scale;
+            double firstRate = GetRateFromId(currencyViewModel.Cur_Id1).Cur_OfficialRate /
+                GetRateFromId(currencyViewModel.Cur_Id1).Cur_Scale;
+            double secondRate = GetRateFromId(currencyViewModel.Cur_Id2).Cur_OfficialRate /
+                GetRateFromId(currencyViewModel.Cur_Id2).Cur_Scale;
             double secondValue = Math.Round(firstRate * firstValue.Value / secondRate, 2);
             currencyViewModel.Value2 = secondValue;
 
@@ -183,10 +182,10 @@ namespace CurrencyConverter.Controllers
         public void CalculateFromSecondInput(CurrencyViewModel currencyViewModel)
         {
             double? secondValue = currencyViewModel.Value2;
-            double secondRate = GetRateFromName(currencyViewModel.Name2).Cur_OfficialRate /
-                GetRateFromName(currencyViewModel.Name2).Cur_Scale;
-            double firstRate = GetRateFromName(currencyViewModel.Name1).Cur_OfficialRate /
-                GetRateFromName(currencyViewModel.Name1).Cur_Scale;
+            double secondRate = GetRateFromId(currencyViewModel.Cur_Id2).Cur_OfficialRate /
+                GetRateFromId(currencyViewModel.Cur_Id2).Cur_Scale;
+            double firstRate = GetRateFromId(currencyViewModel.Cur_Id1).Cur_OfficialRate /
+                GetRateFromId(currencyViewModel.Cur_Id1).Cur_Scale;
             double firstValue = Math.Round(secondRate * secondValue.Value / firstRate, 2);
             currencyViewModel.Value1 = firstValue;
 
@@ -194,30 +193,46 @@ namespace CurrencyConverter.Controllers
 
         public void setValuesForChart(CurrencyViewModel currencyViewModel, string gap)
         {
-            double firstRate = GetRateFromName(currencyViewModel.Name1).Cur_OfficialRate /
-                GetRateFromName(currencyViewModel.Name1).Cur_Scale;
-            if (GetRateFromName(currencyViewModel.Name2).Cur_ID == 1)
+            double firstRate = GetRateFromId(currencyViewModel.Cur_Id1).Cur_OfficialRate /
+                GetRateFromId(currencyViewModel.Cur_Id1).Cur_Scale;
+            if (currencyViewModel.Cur_Id2 == 355)
             {
-                currencyViewModel.labels = loadChart(firstRate, GetRateFromName(currencyViewModel.Name1), gap, true).Result.Keys.ToArray();
-                currencyViewModel.data = loadChart(firstRate, GetRateFromName(currencyViewModel.Name1), gap, true).Result.Values.ToArray();
+                currencyViewModel.labels = loadChart(firstRate, GetRateFromId(currencyViewModel.Cur_Id1), gap, true).Result.Keys.ToArray();
+                currencyViewModel.data = loadChart(firstRate, GetRateFromId(currencyViewModel.Cur_Id1), gap, true).Result.Values.ToArray();
             }
             else
             {
-                currencyViewModel.labels = loadChart(firstRate, GetRateFromName(currencyViewModel.Name2), gap).Result.Keys.ToArray();
-                currencyViewModel.data = loadChart(firstRate, GetRateFromName(currencyViewModel.Name2), gap).Result.Values.ToArray();
+                currencyViewModel.labels = loadChart(firstRate, GetRateFromId(currencyViewModel.Cur_Id2), gap).Result.Keys.ToArray();
+                currencyViewModel.data = loadChart(firstRate, GetRateFromId(currencyViewModel.Cur_Id2), gap).Result.Values.ToArray();
             }
         }
 
         public IActionResult Index(CurrencyViewModel currencyViewModel, string from_two_input, string gap)
-        {
+        {            
             setDefaultValues(currencyViewModel);
             if (from_two_input == "true")
                 CalculateFromSecondInput(currencyViewModel);
             else
                 Calculate(currencyViewModel);
-            setValuesForChart(currencyViewModel, gap);
+            setValuesForChart(currencyViewModel, currencyViewModel.gap);
             ViewBag.Gap = gap;
+            currencyViewModel.Name1 = rates.Where(m => m.Cur_ID == currencyViewModel.Cur_Id1).
+                        Select(m => _localizer[m.Cur_Abbreviation]).FirstOrDefault();
+            currencyViewModel.Name2 = rates.Where(m => m.Cur_ID == currencyViewModel.Cur_Id2).
+                        Select(m => _localizer[m.Cur_Abbreviation]).FirstOrDefault();
             return View(currencyViewModel);
+        }
+
+        [HttpPost]
+        public IActionResult SetLanguage(string culture, string returnUrl)
+        {            
+            Response.Cookies.Append(
+                CookieRequestCultureProvider.DefaultCookieName,
+                CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) }
+            );
+
+            return LocalRedirect(returnUrl);
         }
 
         public IActionResult Privacy()

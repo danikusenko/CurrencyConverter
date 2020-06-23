@@ -8,5 +8,6 @@ namespace CurrencyConverter.Models.Chart
     public class ScaleLabel
     {
         public bool display { get; set; }
+        public string labelString { get; set; }
     }
 }

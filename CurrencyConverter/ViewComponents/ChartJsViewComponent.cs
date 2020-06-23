@@ -16,7 +16,7 @@ namespace CurrencyConverter.ViewComponents
         public IViewComponentResult Invoke(double[] data, string[] labels)
         {
             JArray colors = new JArray();
-            JArray borderColor = new JArray();
+            JArray borderColor = new JArray();            
             int stepsize = labels.Length <= 5 ? 1 : labels.Length > 5 && labels.Length <= 32 ? 10 : 30;
             if (data.Length > 0)
             {
@@ -50,7 +50,7 @@ namespace CurrencyConverter.ViewComponents
                 options:
                 {      
                     scales:
-                    {
+                    {                        
                         yAxes: [{
                             ticks:
                             {
@@ -59,9 +59,9 @@ namespace CurrencyConverter.ViewComponents
                             },
                             scaleLabel:
                             {
-                                display: true
+                                display: true                                  
                             }
-                        }]
+                        }]                        
                     },
                     elements: {
                         point:{
