@@ -25,8 +25,6 @@ namespace CurrencyConverter.ViewModels
 
         public decimal? Value2 { get; set; }
 
-        public decimal?[] data { get; set; }
-
-        public string[] labels { get; set; }       
+        public Dictionary<string, decimal?> Chart { get; set; }         
     }
 }

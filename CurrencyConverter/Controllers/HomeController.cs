@@ -134,9 +134,8 @@ namespace CurrencyConverter.Controllers
         {
             currencyViewModel.Value1 = currencyViewModel.Value1 ?? 1;
             Rate usd = rates.Where(rate => rate.Cur_ID == 145).Select(i => i).First();
-            currencyViewModel.Value2 = currencyViewModel.Value2 ?? usd.Cur_OfficialRate;            
-            currencyViewModel.data = currencyViewModel.data ?? loadChart(1, usd).Result.Values.ToArray();
-            currencyViewModel.labels = currencyViewModel.labels ?? loadChart(1, usd).Result.Keys.ToArray();
+            currencyViewModel.Value2 = currencyViewModel.Value2 ?? usd.Cur_OfficialRate;
+            currencyViewModel.Chart = currencyViewModel.Chart ?? loadChart(1, usd).Result;            
             currencyViewModel.Rates = currencyViewModel.Rates ?? rates;
             currencyViewModel.Cur_Id2 = currencyViewModel.Cur_Id2 ?? 145;
             currencyViewModel.Cur_Id1 = currencyViewModel.Cur_Id1 ?? 355;
@@ -181,13 +180,11 @@ namespace CurrencyConverter.Controllers
                 GetRateFromId(currencyViewModel.Cur_Id1).Cur_Scale;
             if (currencyViewModel.Cur_Id2 == 355)
             {
-                currencyViewModel.labels = loadChart(firstRate, GetRateFromId(currencyViewModel.Cur_Id1), gap, true).Result.Keys.ToArray();
-                currencyViewModel.data = loadChart(firstRate, GetRateFromId(currencyViewModel.Cur_Id1), gap, true).Result.Values.ToArray();
+                currencyViewModel.Chart = loadChart(firstRate, GetRateFromId(currencyViewModel.Cur_Id1), gap, true).Result;                
             }
             else
             {
-                currencyViewModel.labels = loadChart(firstRate, GetRateFromId(currencyViewModel.Cur_Id2), gap).Result.Keys.ToArray();
-                currencyViewModel.data = loadChart(firstRate, GetRateFromId(currencyViewModel.Cur_Id2), gap).Result.Values.ToArray();
+                currencyViewModel.Chart = loadChart(firstRate, GetRateFromId(currencyViewModel.Cur_Id2), gap).Result;               
             }
         }
 

@@ -12,10 +12,12 @@ namespace CurrencyConverter.ViewComponents
     [ViewComponent(Name = "chartjs")]
     public class ChartJsViewComponent : ViewComponent
     {
-        public IViewComponentResult Invoke(decimal?[] data, string[] labels)
+        public IViewComponentResult Invoke(Dictionary<string, decimal?> chart)
         {
             JArray colors = new JArray();
-            JArray borderColor = new JArray();            
+            JArray borderColor = new JArray();
+            string[] labels = chart.Keys.ToArray();
+            decimal?[] data = chart.Values.ToArray();
             double k = labels.Length > 300 ? 4 : 1;
             
             if (data.Length > 0)
