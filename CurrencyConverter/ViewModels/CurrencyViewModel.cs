@@ -27,8 +27,6 @@ namespace CurrencyConverter.ViewModels
 
         public decimal?[] data { get; set; }
 
-        public string[] labels { get; set; }
-
-       // public string gap { get; set; }
+        public string[] labels { get; set; }       
     }
 }

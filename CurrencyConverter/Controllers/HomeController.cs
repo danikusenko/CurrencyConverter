@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using CurrencyConverter.Models;
 using Newtonsoft.Json.Linq;
 using System.Net;
-using System.Xml;
 using CurrencyConverter.ViewModels;
 using System.IO;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -20,6 +19,7 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Caching.Memory;
+using CurrencyConverter.Services;
 
 namespace CurrencyConverter.Controllers
 {
@@ -35,28 +35,6 @@ namespace CurrencyConverter.Controllers
             _logger = logger;
             _localizer = localizer;
             _memoryCache = memoryCache;            
-        }
-
-        public async static Task<List<Rate>> GetRates()
-        {
-            string dailyСourses, monthlyСourses;
-            using (var vc = new WebClient())
-            {
-                dailyСourses = await vc.DownloadStringTaskAsync(new Uri("https://www.nbrb.by/api/exrates/rates?periodicity=0"));
-                monthlyСourses = await vc.DownloadStringTaskAsync(new Uri("https://www.nbrb.by/api/exrates/rates?periodicity=1"));
-            }
-            List<Rate> rates = JsonConvert.DeserializeObject<List<Rate>>(dailyСourses);
-            rates.AddRange(JsonConvert.DeserializeObject<List<Rate>>(monthlyСourses));
-            rates.Add(new Rate()
-            {
-                Cur_ID = 355,
-                Cur_Name = "Белорусский рубль",
-                Cur_Scale = 1,
-                Cur_OfficialRate = 1,
-                Date = DateTime.Today,
-                Cur_Abbreviation = "BY"
-            });
-            return rates;
         }
 
         public async Task<Dictionary<string, decimal?>> loadChart(decimal? dividend_currency_rate, Rate rate,
@@ -217,14 +195,14 @@ namespace CurrencyConverter.Controllers
         {
             if (!_memoryCache.TryGetValue("rates", out rates))
             {
-                rates = GetRates().Result;
+                rates = CurrencyService.GetRates().Result;//GetRates().Result;
             }
             setDefaultValues(currencyViewModel);
             if (from_two_input == "true")
                 CalculateFromSecondInput(currencyViewModel);
             else
                 Calculate(currencyViewModel);
-            setValuesForChart(currencyViewModel, /*currencyViewModel.gap*/gap);
+            setValuesForChart(currencyViewModel, gap);
             ViewBag.Gap = gap;
             currencyViewModel.Name1 = rates.Where(m => m.Cur_ID == currencyViewModel.Cur_Id1).
                         Select(m => _localizer[m.Cur_Abbreviation]).FirstOrDefault();

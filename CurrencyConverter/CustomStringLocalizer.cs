@@ -1,4 +1,5 @@
 ﻿using CurrencyConverter.Models;
+using CurrencyConverter.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
 using Newtonsoft.Json;
@@ -16,33 +17,13 @@ namespace CurrencyConverter
         Dictionary<string, Dictionary<string, string>> resources;
         private IMemoryCache _memoryCache;
 
-        public async static Task<List<Currency>> GetCurrencies()
-        {
-            string cur;
-            using (var vc = new WebClient())
-            {
-                cur = await vc.DownloadStringTaskAsync(new Uri("https://www.nbrb.by/api/exrates/currencies"));
-            }
-            List<Currency> currencies = JsonConvert.DeserializeObject<List<Currency>>(cur);
-            currencies.Add(new Currency()
-            {
-                Cur_ID = 355,
-                Cur_Name = "Белорусский рубль",
-                Cur_Scale = 1,
-                Cur_Name_Bel = "Беларускі рубель",
-                Cur_Name_Eng = "Belarusian ruble",
-                Cur_Abbreviation = "BY"
-            });
-            return currencies;
-        }
-
         public CustomStringLocalizer(IMemoryCache memoryCache)
         {
             List<Currency> currencies; 
             _memoryCache = memoryCache;
             if (!_memoryCache.TryGetValue("currencies", out currencies))
             {
-                currencies = GetCurrencies().Result;                
+                currencies = CurrencyService.GetCurrencies().Result;                
             }
             Dictionary<string, string> enDict = new Dictionary<string, string>();
             Dictionary<string, string> ruDict = new Dictionary<string, string>();
