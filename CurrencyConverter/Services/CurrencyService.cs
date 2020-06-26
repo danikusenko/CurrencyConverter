@@ -1,27 +1,22 @@
 ﻿using CurrencyConverter.Models;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
+
 
 namespace CurrencyConverter.Services
 {
-    public class CurrencyService: BackgroundService
+    public class CurrencyService : BackgroundService
     {
-        public class RootObject
-        {
-            public string code { get; set; }
-            public string number { get; set; }
-            public string name { get; set; }
-        }
-
         private readonly IMemoryCache memoryCache;
 
         public CurrencyService(IMemoryCache memoryCache)
@@ -31,21 +26,47 @@ namespace CurrencyConverter.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            string dailyСourses = "", monthlyСourses = "", cur = "";            
             while (!stoppingToken.IsCancellationRequested)
             {
-                List<Currency> currencies = new List<Currency>();
                 try
                 {
-                    Thread.CurrentThread.CurrentCulture = new CultureInfo("ru-RU");
-                    Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-                    XDocument xml = XDocument.Load("https://www.nbrb.by/services/xmlexrates.aspx");
+                    using (var vc = new WebClient())
+                    {
+                        dailyСourses = await vc.DownloadStringTaskAsync(new Uri("https://www.nbrb.by/api/exrates/rates?periodicity=0"));
+                        monthlyСourses = await vc.DownloadStringTaskAsync(new Uri("https://www.nbrb.by/api/exrates/rates?periodicity=1"));
+                        cur = await vc.DownloadStringTaskAsync(new Uri("https://www.nbrb.by/api/exrates/currencies"));
+                    }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Console.WriteLine(e.Message);
                 }
+                List<Rate> rates = JsonConvert.DeserializeObject<List<Rate>>(dailyСourses);
+                rates.AddRange(JsonConvert.DeserializeObject<List<Rate>>(monthlyСourses));
+                rates.Add(new Rate()
+                {
+                    Cur_ID = 355,
+                    Cur_Name = "Белорусский рубль",
+                    Cur_Scale = 1,
+                    Cur_OfficialRate = 1,
+                    Date = DateTime.Today,
+                    Cur_Abbreviation = "BY"
+                });
+                List<Currency> currencies = JsonConvert.DeserializeObject<List<Currency>>(cur);
+                currencies.Add(new Currency()
+                {
+                    Cur_ID = 355,
+                    Cur_Name = "Белорусский рубль",
+                    Cur_Scale = 1,
+                    Cur_Name_Bel = "Беларускі рубель",
+                    Cur_Name_Eng = "Belarusian ruble",
+                    Cur_Abbreviation = "BY"
+                });                
+                memoryCache.Set("rates", rates, TimeSpan.FromMinutes(1440));
+                memoryCache.Set("currencies", currencies, TimeSpan.FromMinutes(1440));
+                await Task.Delay(3600000, stoppingToken);
             }
-            await Task.Delay(3600000, stoppingToken);
         }
     }
 }

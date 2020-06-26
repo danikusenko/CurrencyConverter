@@ -86,7 +86,7 @@
             })();
 
             function validateAndSumbit(introduced_input, received_input, set_value) {
-                let value = $(introduced_input).val();
+                let value = $(introduced_input).val();                
                 let tmp = value.split(",").join(".");
                 let k = 0;
                 for (let i of tmp) {
@@ -106,7 +106,7 @@
                     $("#first_form").submit();
                 }
             }
-            $("#five_days, #month, #year").on("click", function (event) {
+            $("#five_days, #month, #year").on("click", function (event) {                
                 $("#gap_input").val(event.target.id);
                 validateAndSumbit("#first_currency", "#second_currency", "false");
             });
@@ -116,6 +116,17 @@
 
             $("#first_currency").on("keyup", function () {
                 validateAndSumbit("#first_currency", "#second_currency", "false");
+            });
+
+            $("#second_currency, #first_currency").on("keypress", function () {
+                $(this).val($(this).val().replace(/[^0-9\.|\,]/g,''));
+                debugger;
+                if(event.which == 44) {
+                    return true;
+                }
+               if ((event.which != 46 || $(this).val().indexOf('.') != -1) && (event.which < 48 || event.which > 57)) {
+                    event.preventDefault();
+               } 
             });
         });
     </script>

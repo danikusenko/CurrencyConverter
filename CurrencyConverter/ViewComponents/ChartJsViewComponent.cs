@@ -1,5 +1,4 @@
-﻿using CurrencyConverter.Models.Chart;
-using CurrencyConverter.ViewModels;
+﻿using CurrencyConverter.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -13,11 +12,12 @@ namespace CurrencyConverter.ViewComponents
     [ViewComponent(Name = "chartjs")]
     public class ChartJsViewComponent : ViewComponent
     {
-        public IViewComponentResult Invoke(double[] data, string[] labels)
+        public IViewComponentResult Invoke(decimal?[] data, string[] labels)
         {
             JArray colors = new JArray();
             JArray borderColor = new JArray();            
-            int stepsize = labels.Length <= 5 ? 1 : labels.Length > 5 && labels.Length <= 32 ? 10 : 30;
+            double k = labels.Length > 300 ? 4 : 1;
+            
             if (data.Length > 0)
             {
                 if (data[0] > data[data.Length - 1])
@@ -31,6 +31,7 @@ namespace CurrencyConverter.ViewComponents
                     borderColor.Add("rgba(15, 157, 88, 1)");
                 }
             }
+
             var chartData = @"
             {
                 type: 'line',
@@ -50,8 +51,29 @@ namespace CurrencyConverter.ViewComponents
                 options:
                 {      
                     scales:
-                    {                        
-                        yAxes: [{
+                    {
+                        x: {                                         
+                            display: true,                                                    
+                            scaleLabel:
+                            {
+                                display: true
+                            },
+                            ticks:
+                            {                               
+                                beginAtZero: false
+                            }
+                        },      
+                        xAxes: [{
+                            ticks:
+                            {
+                                maxRotation: 0,
+                                minRotation: 0,
+                                callback: function(tick, index, array) {                                                    
+                                    return (index % " + k + @") ? '' : tick;                                              
+                                }
+                            }
+                        }],
+                        y: {
                             ticks:
                             {
                                 beginAtZero: false,
@@ -59,9 +81,10 @@ namespace CurrencyConverter.ViewComponents
                             },
                             scaleLabel:
                             {
-                                display: true                                  
+                                display: true,
+                                labelString: 'Slow SQL Queries'
                             }
-                        }]                        
+                        }                     
                     },
                     elements: {
                         point:{
@@ -72,19 +95,23 @@ namespace CurrencyConverter.ViewComponents
                         display: false
                     },
                     tooltips: {
-                        enabled: true
+                        enabled: true,
+                        callbacks: {
+                            label: function(tooltipItem, data) {
+                            var label = data.datasets[tooltipItem.datasetIndex].label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += Math.round(tooltipItem.yLabel * 100) / 100;
+                            return label;
+                        }}
                     }
                 }
             }";
-            var chart = JsonConvert.DeserializeObject<ChartJs>(chartData);
-
+           
             var chartModel = new ChartJsViewModel
-            {
-                Chart = chart,
-                ChartJson = JsonConvert.SerializeObject(chart, new JsonSerializerSettings
-                {
-                    NullValueHandling = NullValueHandling.Ignore
-                })
+            {                
+                ChartJson = chartData                
             };
 
             return View(chartModel);

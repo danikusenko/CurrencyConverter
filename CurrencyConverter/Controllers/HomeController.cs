@@ -19,19 +19,22 @@ using System.ComponentModel;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace CurrencyConverter.Controllers
 {
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-        private readonly List<Rate> rates = GetRates().Result;
+        private  List<Rate> rates; 
         private readonly IStringLocalizer _localizer;
+        private  IMemoryCache _memoryCache;
 
-        public HomeController(ILogger<HomeController> logger, IStringLocalizer localizer)
+        public HomeController(ILogger<HomeController> logger, IStringLocalizer localizer, IMemoryCache memoryCache)
         {
             _logger = logger;
             _localizer = localizer;
+            _memoryCache = memoryCache;            
         }
 
         public async static Task<List<Rate>> GetRates()
@@ -56,9 +59,10 @@ namespace CurrencyConverter.Controllers
             return rates;
         }
 
-        public async Task<Dictionary<string, double>> loadChart(double dividend_currency_rate, Rate rate,
+        public async Task<Dictionary<string, decimal?>> loadChart(decimal? dividend_currency_rate, Rate rate,
             string gap = "month", bool byRub = false)
         {
+            
             string courses, uri, format = "M", secondDate = "", firstDate = "";
             int[] primaryKeys = { 68, 184, 74, 77, 232, 27 };
             bool isMonthlyСourses = Array.Exists(primaryKeys, i => i == rate.Cur_ID || rate.Cur_ID >= 306);
@@ -75,7 +79,7 @@ namespace CurrencyConverter.Controllers
                     {
                         firstDate = DateTime.Today.AddYears(-1).ToString("yyyy-M-d");
                         secondDate = DateTime.Today.ToString("yyyy-M-d");
-                        format = "D";
+                        format = "dd MMM yyyy";                        
                         isYear = true;
                         break;
                     }
@@ -87,6 +91,8 @@ namespace CurrencyConverter.Controllers
                         break;
                     }
             }
+            
+
             List<Rate> rates = new List<Rate>();
             if (!isMonthlyСourses)
             {
@@ -117,7 +123,7 @@ namespace CurrencyConverter.Controllers
             }
 
 
-            Dictionary<string, double> values = new Dictionary<string, double>();
+            Dictionary<string, decimal?> values = new Dictionary<string, decimal?>();
             if (byRub)
             {
                 foreach (var _rate in rates)
@@ -141,16 +147,16 @@ namespace CurrencyConverter.Controllers
             foreach (var rate in rates)
             {
                 _rates.Add(rate.Cur_ID, _localizer[rate.Cur_Abbreviation]);
-            }            
-            return new SelectList(_rates.OrderBy(x => x.Value), "Key", "Value");            
+            }
+            return new SelectList(_rates.OrderBy(x => x.Value), "Key", "Value");
         }
 
 
         public void setDefaultValues(CurrencyViewModel currencyViewModel)
         {
-            currencyViewModel.Value1 = currencyViewModel.Value1 ?? 1;            
+            currencyViewModel.Value1 = currencyViewModel.Value1 ?? 1;
             Rate usd = rates.Where(rate => rate.Cur_ID == 145).Select(i => i).First();
-            currencyViewModel.Value2 = currencyViewModel.Value2 ?? usd.Cur_OfficialRate;
+            currencyViewModel.Value2 = currencyViewModel.Value2 ?? usd.Cur_OfficialRate;            
             currencyViewModel.data = currencyViewModel.data ?? loadChart(1, usd).Result.Values.ToArray();
             currencyViewModel.labels = currencyViewModel.labels ?? loadChart(1, usd).Result.Keys.ToArray();
             currencyViewModel.Rates = currencyViewModel.Rates ?? rates;
@@ -159,41 +165,41 @@ namespace CurrencyConverter.Controllers
             currencyViewModel.CurrencyNames = getAllNames();
         }
 
-        
+
         public Rate GetRateFromId(int? id)
         {
             Rate rate = rates.Where(i => i.Cur_ID == id).Select(i => i).First();
             return rate;
         }
-        
+
 
         public void Calculate(CurrencyViewModel currencyViewModel)
         {
-            double? firstValue = currencyViewModel.Value1;
-            double firstRate = GetRateFromId(currencyViewModel.Cur_Id1).Cur_OfficialRate /
+            decimal? firstValue = currencyViewModel.Value1;
+            decimal? firstRate = GetRateFromId(currencyViewModel.Cur_Id1).Cur_OfficialRate /
                 GetRateFromId(currencyViewModel.Cur_Id1).Cur_Scale;
-            double secondRate = GetRateFromId(currencyViewModel.Cur_Id2).Cur_OfficialRate /
+            decimal? secondRate = GetRateFromId(currencyViewModel.Cur_Id2).Cur_OfficialRate /
                 GetRateFromId(currencyViewModel.Cur_Id2).Cur_Scale;
-            double secondValue = Math.Round(firstRate * firstValue.Value / secondRate, 2);
+            decimal? secondValue = Math.Round((firstRate * firstValue.Value / secondRate).Value, 2);
             currencyViewModel.Value2 = secondValue;
 
         }
 
         public void CalculateFromSecondInput(CurrencyViewModel currencyViewModel)
         {
-            double? secondValue = currencyViewModel.Value2;
-            double secondRate = GetRateFromId(currencyViewModel.Cur_Id2).Cur_OfficialRate /
+            decimal? secondValue = currencyViewModel.Value2;
+            decimal? secondRate = GetRateFromId(currencyViewModel.Cur_Id2).Cur_OfficialRate /
                 GetRateFromId(currencyViewModel.Cur_Id2).Cur_Scale;
-            double firstRate = GetRateFromId(currencyViewModel.Cur_Id1).Cur_OfficialRate /
+            decimal? firstRate = GetRateFromId(currencyViewModel.Cur_Id1).Cur_OfficialRate /
                 GetRateFromId(currencyViewModel.Cur_Id1).Cur_Scale;
-            double firstValue = Math.Round(secondRate * secondValue.Value / firstRate, 2);
+            decimal? firstValue = Math.Round((secondRate * secondValue.Value / firstRate).Value, 2);
             currencyViewModel.Value1 = firstValue;
 
         }
 
         public void setValuesForChart(CurrencyViewModel currencyViewModel, string gap)
         {
-            double firstRate = GetRateFromId(currencyViewModel.Cur_Id1).Cur_OfficialRate /
+            decimal? firstRate = GetRateFromId(currencyViewModel.Cur_Id1).Cur_OfficialRate /
                 GetRateFromId(currencyViewModel.Cur_Id1).Cur_Scale;
             if (currencyViewModel.Cur_Id2 == 355)
             {
@@ -208,13 +214,17 @@ namespace CurrencyConverter.Controllers
         }
 
         public IActionResult Index(CurrencyViewModel currencyViewModel, string from_two_input, string gap)
-        {            
+        {
+            if (!_memoryCache.TryGetValue("rates", out rates))
+            {
+                rates = GetRates().Result;
+            }
             setDefaultValues(currencyViewModel);
             if (from_two_input == "true")
                 CalculateFromSecondInput(currencyViewModel);
             else
                 Calculate(currencyViewModel);
-            setValuesForChart(currencyViewModel, currencyViewModel.gap);
+            setValuesForChart(currencyViewModel, /*currencyViewModel.gap*/gap);
             ViewBag.Gap = gap;
             currencyViewModel.Name1 = rates.Where(m => m.Cur_ID == currencyViewModel.Cur_Id1).
                         Select(m => _localizer[m.Cur_Abbreviation]).FirstOrDefault();
@@ -225,7 +235,7 @@ namespace CurrencyConverter.Controllers
 
         [HttpPost]
         public IActionResult SetLanguage(string culture, string returnUrl)
-        {            
+        {
             Response.Cookies.Append(
                 CookieRequestCultureProvider.DefaultCookieName,
                 CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),

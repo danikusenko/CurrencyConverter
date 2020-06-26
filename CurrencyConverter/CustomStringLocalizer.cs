@@ -1,4 +1,5 @@
 ﻿using CurrencyConverter.Models;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
 using Newtonsoft.Json;
 using System;
@@ -13,6 +14,7 @@ namespace CurrencyConverter
     public class CustomStringLocalizer : IStringLocalizer
     {
         Dictionary<string, Dictionary<string, string>> resources;
+        private IMemoryCache _memoryCache;
 
         public async static Task<List<Currency>> GetCurrencies()
         {
@@ -34,9 +36,14 @@ namespace CurrencyConverter
             return currencies;
         }
 
-        public CustomStringLocalizer()
+        public CustomStringLocalizer(IMemoryCache memoryCache)
         {
-            List<Currency> currencies = GetCurrencies().Result;
+            List<Currency> currencies; 
+            _memoryCache = memoryCache;
+            if (!_memoryCache.TryGetValue("currencies", out currencies))
+            {
+                currencies = GetCurrencies().Result;                
+            }
             Dictionary<string, string> enDict = new Dictionary<string, string>();
             Dictionary<string, string> ruDict = new Dictionary<string, string>();
             Dictionary<string, string> beDict = new Dictionary<string, string>();
